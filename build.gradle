@@ -1,0 +1,146 @@
+// Apply Gradle plugins
+plugins {
+    id 'java'
+    id 'maven'
+    id 'eclipse'
+    id 'idea'
+    id 'checkstyle'
+
+    id 'com.github.hierynomus.license' version '0.11.0'
+}
+
+defaultTasks 'clean', 'licenseFormat', 'build'
+
+// Project information
+group = 'net.caseif.phtoolkit'
+version = '0.1.0-SNAPSHOT'
+
+// Extended project information
+ext.projectName = 'phtoolkit'
+ext.description = 'Lightweight Java toolkit for submitting arbitrary information to a web server (i.e. "phoning home").'
+ext.inceptionYear = '2015'
+ext.packaging = 'jar'
+ext.versionSuffix = version.contains('SNAPSHOT') ? (
+        (
+                System.getenv('GIT_COMMIT') ? ('-git('
+                        + System.getenv('GIT_BRANCH')
+                        .substring(System.getenv('GIT_BRANCH').split('/')[0].length() + 1) + '-'
+                        + System.getenv('GIT_COMMIT').substring(0, 7) + ')') : ''
+        )
+                + (System.getenv('BUILD_NUMBER') ? '-jnks' + System.getenv('BUILD_NUMBER') : '')
+) : ''
+
+sourceCompatibility = 1.7
+targetCompatibility = 1.7
+
+configurations {
+    deployerJars
+}
+
+// project repositories
+repositories {
+    mavenCentral()
+    maven {
+        name = 'sponge'
+        url = 'http://repo.spongepowered.org/maven'
+    }
+}
+
+ext {
+}
+
+// Project dependencies
+dependencies {
+    checkstyle 'org.spongepowered:checkstyle:6.1.1-sponge1'
+
+    deployerJars 'org.apache.maven.wagon:wagon-ssh:2.9'
+}
+
+// Read source files using UTF-8
+tasks.withType(JavaCompile) {
+    options.encoding = 'UTF-8'
+    options.compilerArgs += '-Xlint:all'
+}
+
+processResources {
+    filter {String line -> line.replace('SNAPSHOT', 'SNAPSHOT' + versionSuffix)}
+}
+
+jar {
+    classifier = 'base'
+}
+
+// License header formatting
+license {
+    header file('LICENSE')
+    excludes([
+            '**/*.properties',
+            '**/*.txt',
+            '**/*.yml',
+            '**/Metrics.java',
+            '**/LICENSE'
+    ])
+    sourceSets = project.sourceSets
+    ignoreFailures false
+    strictCheck true
+    mapping {
+        java = 'SLASHSTAR_STYLE'
+    }
+}
+
+// check code style
+checkstyle {
+    configProperties = [
+            'name': project.name,
+            'year': project.inceptionYear,
+            'basedir': project.projectDir,
+            'severity': 'warning'
+    ]
+    configFile = file('etc/checkstyle.xml')
+}
+
+tasks.withType(Checkstyle) {
+    exclude '**/*.properties'
+    exclude '**/*.yml'
+}
+
+uploadArchives {
+    repositories.mavenDeployer {
+        setUniqueVersion(true)
+        configuration = configurations.deployerJars
+        if (project.hasProperty('mavenRepo')) {
+            repository(url: project.property('mavenRepo')) {
+                authentication(userName: project.property('mavenUser'), password: project.property('mavenPass'))
+            }
+        }
+
+        pom {
+            groupId = project.group
+            version = project.version
+            artifactId = project.ext.projectName
+            project {
+                packaging 'jar'
+                description project.ext.description
+                url 'http://github.com/caseif/PH-Toolkit'
+
+                scm {
+                    url 'https://github.com/caseif/PH-Toolkit'
+                    connection 'scm:git:git://github.com/caseif/PH-Toolkit.git'
+                    developerConnection 'scm:git:git@github.com:caseif/PH-Toolkit.git'
+                }
+
+                licenses {
+                    license {
+                        name 'BSD 3-Clause'
+                        url 'http://opensource.org/licenses/BSD-3-clause'
+                        distribution 'repo'
+                    }
+                }
+            }
+        }
+    }
+}
+
+task wrapper(type: Wrapper) {
+    gradleVersion = '2.6'
+}
