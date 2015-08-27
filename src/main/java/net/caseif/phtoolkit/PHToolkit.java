@@ -114,7 +114,7 @@ public class PHToolkit {
 
         /**
          * Adds a piece of data to this {@link Payload} in the form of a "short"
-         * (16-bit) integer.
+         * (16-bit) signed integer.
          *
          * @param key The key to assign to the data
          * @param data The content of the data
@@ -128,7 +128,7 @@ public class PHToolkit {
 
         /**
          * Adds a piece of data to this {@link Payload} in the form of a 32-bit
-         * integer.
+         * signed integer.
          *
          * @param key The key to assign to the data
          * @param data The content of the data
@@ -142,7 +142,7 @@ public class PHToolkit {
 
         /**
          * Adds a piece of data to this {@link Payload} in the form of a "long"
-         * (64-bit) integer.
+         * (64-bit) signed integer.
          *
          * @param key The key to assign to the data
          * @param data The content of the data
