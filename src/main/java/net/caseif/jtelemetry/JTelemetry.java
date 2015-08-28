@@ -26,7 +26,7 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-package net.caseif.phtoolkit;
+package net.caseif.jtelemetry;
 
 import java.io.ByteArrayOutputStream;
 import java.io.DataOutputStream;
@@ -39,32 +39,32 @@ import java.util.HashMap;
 import java.util.Map;
 
 /**
- * Lightweight Java toolkit for submitting arbitrary information to a web server
- * (i.e. "phoning home").
+ * Lightweight Java toolkit for submitting arbitrary information to a web
+ * server.
  *
  * @author Max Roncace
  * @version 1.0.0
  */
-public class PHToolkit {
+public class JTelemetry {
 
     private final String recipient;
 
     /**
-     * Constructs a new {@link PHToolkit} object with the given recipient
+     * Constructs a new {@link JTelemetry} object with the given recipient
      * address. This address must have an HTTP or HTTPS protocol.
      *
-     * @param recipient The recipient address of this {@link PHToolkit}
+     * @param recipient The recipient address of this {@link JTelemetry}
      * @throws IllegalArgumentException If the address's protocol is not valid
      * @since 1.0
      */
-    public PHToolkit(String recipient) throws IllegalArgumentException {
+    public JTelemetry(String recipient) throws IllegalArgumentException {
         this.recipient = recipient;
     }
 
     /**
-     * Returns the recipient address of this {@link PHToolkit}.
+     * Returns the recipient address of this {@link JTelemetry}.
      *
-     * @return The recipient address of this {@link PHToolkit}
+     * @return The recipient address of this {@link JTelemetry}
      * @since 1.0
      */
     public String getRecipient() {
@@ -72,7 +72,7 @@ public class PHToolkit {
     }
 
     /**
-     * Creates a new {@link Payload} parented by this {@link PHToolkit}.
+     * Creates a new {@link Payload} parented by this {@link JTelemetry}.
      *
      * @return The new {@link Payload}
      * @since 1.0
@@ -89,27 +89,27 @@ public class PHToolkit {
      */
     public class Payload {
 
-        private PHToolkit parent;
+        private JTelemetry parent;
 
         private Map<String, DataEntry> dataMap = new HashMap<>();
 
-        private Payload(PHToolkit parent) {
+        private Payload(JTelemetry parent) {
             this.parent = parent;
         }
 
         /**
-         * Returns the parent {@link PHToolkit} of this {@link Payload}.
+         * Returns the parent {@link JTelemetry} of this {@link Payload}.
          *
-         * @return The parent {@link PHToolkit} of this {@link Payload}
+         * @return The parent {@link JTelemetry} of this {@link Payload}
          * @since 1.0
          */
-        public PHToolkit getParent() {
+        public JTelemetry getParent() {
             return parent;
         }
 
         /**
          * Attempts to submit this payload to the address defined by the parent
-         * {@link PHToolkit}.
+         * {@link JTelemetry}.
          *
          * @return The HTTP response code returned by the server
          * @throws IOException If an exception occurs while sending a request to

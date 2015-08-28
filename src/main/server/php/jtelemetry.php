@@ -1,9 +1,9 @@
 <?php
 
-# Utility class for analyzing payloads from PH Toolkit.
-#
-# Usage: include phtk.php from the page the payload is sent to and call parsePostBody().
-# This method will return a map of all key-value pairs contained by the payload.
+// Utility page for analyzing payloads from jTelemetry.
+//
+// Usage: include jtelemetry.php from the page the payload is sent to and call parsePostBody().
+// This method will return a map of all key-value pairs contained by the payload.
 
 $TYPE_BOOLEAN = 0;
 $TYPE_BYTE    = 1;

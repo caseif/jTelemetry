@@ -12,12 +12,12 @@ plugins {
 defaultTasks 'clean', 'licenseFormat', 'build'
 
 // Project information
-group = 'net.caseif.phtoolkit'
+group = 'net.caseif.jtelemetry'
 version = '1.0.0-SNAPSHOT'
 
 // Extended project information
-ext.projectName = 'phtoolkit'
-ext.description = 'Lightweight Java toolkit for submitting arbitrary information to a web server (i.e. "phoning home").'
+ext.projectName = 'jtelemetry'
+ext.description = 'Lightweight Java toolkit for submitting arbitrary information to a web server.'
 ext.inceptionYear = '2015'
 ext.packaging = 'jar'
 ext.versionSuffix = version.contains('SNAPSHOT') ? (
@@ -138,12 +138,12 @@ uploadArchives {
             project {
                 packaging 'jar'
                 description project.ext.description
-                url 'http://github.com/caseif/PH-Toolkit'
+                url 'http://github.com/caseif/jTelemetry'
 
                 scm {
-                    url 'https://github.com/caseif/PH-Toolkit'
-                    connection 'scm:git:git://github.com/caseif/PH-Toolkit.git'
-                    developerConnection 'scm:git:git@github.com:caseif/PH-Toolkit.git'
+                    url 'https://github.com/caseif/jTelemetry'
+                    connection 'scm:git:git://github.com/caseif/jTelemetry.git'
+                    developerConnection 'scm:git:git@github.com:caseif/jTelemetry.git'
                 }
 
                 licenses {
