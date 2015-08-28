@@ -1,5 +1,6 @@
 package net.caseif.phtoolkit;
 
+import java.io.ByteArrayOutputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
 import java.net.HttpURLConnection;
@@ -93,23 +94,28 @@ public class PHToolkit {
             conn.setRequestMethod("POST");
             conn.setDoOutput(true);
             conn.setRequestProperty("Content-Type", "application/octet-stream");
+            byte[] serial = serializeData();
+            conn.setRequestProperty("Content-Length", Integer.toString(serial.length));
             try (DataOutputStream wr = new DataOutputStream(conn.getOutputStream())) {
-                wr.write(serializeData());
+                wr.write(serial);
             }
             return conn.getResponseCode();
         }
 
         private byte[] serializeData() {
-            ByteBuffer buffer = ByteBuffer.allocate(4);
-            // magic number for verification purposes
-            byte[] magic = new byte[]{(byte) 0xB0, (byte) 0x00, (byte) 0xB1, (byte) 0xE5};
-            buffer.put(magic);
-            for (DataEntry entry : dataMap.values()) {
-                byte[] serial = entry.serialize();
-                buffer.limit(buffer.limit() + serial.length);
-                buffer.put(serial);
+            try {
+                ByteArrayOutputStream out = new ByteArrayOutputStream();
+                // magic number for verification purposes
+                byte[] magic = new byte[]{(byte) 0xB0, (byte) 0x00, (byte) 0xB1, (byte) 0xE5};
+                out.write(magic);
+                for (DataEntry entry : dataMap.values()) {
+                    byte[] serial = entry.serialize();
+                    out.write(serial);
+                }
+                return out.toByteArray();
+            } catch (IOException ex) {
+                throw new AssertionError(ex);
             }
-            return buffer.array();
         }
 
         /**
@@ -118,7 +124,7 @@ public class PHToolkit {
          * @param key The key to assign to the data
          * @param data The content of the data
          * @throws IllegalArgumentException If this payload already contains
-         *     a data entry with the given key
+         *     a data entry with the given key, or if the key is {@code null}
          * @since 1.0
          */
         public void addData(String key, String data) throws IllegalArgumentException {
@@ -132,7 +138,7 @@ public class PHToolkit {
          * @param key The key to assign to the data
          * @param data The content of the data
          * @throws IllegalArgumentException If this payload already contains
-         *     a data entry with the given key
+         *     a data entry with the given key, or if the key is {@code null}
          * @since 1.0
          */
         public void addData(String key, boolean data) throws IllegalArgumentException {
@@ -146,7 +152,7 @@ public class PHToolkit {
          * @param key The key to assign to the data
          * @param data The content of the data
          * @throws IllegalArgumentException If this payload already contains
-         *     a data entry with the given key
+         *     a data entry with the given key, or if the key is {@code null}
          * @since 1.0
          */
         public void addData(String key, short data) throws IllegalArgumentException {
@@ -160,7 +166,7 @@ public class PHToolkit {
          * @param key The key to assign to the data
          * @param data The content of the data
          * @throws IllegalArgumentException If this payload already contains
-         *     a data entry with the given key
+         *     a data entry with the given key, or if the key is {@code null}
          * @since 1.0
          */
         public void addData(String key, int data) throws IllegalArgumentException {
@@ -174,7 +180,7 @@ public class PHToolkit {
          * @param key The key to assign to the data
          * @param data The content of the data
          * @throws IllegalArgumentException If this payload already contains
-         *     a data entry with the given key
+         *     a data entry with the given key, or if the key is {@code null}
          * @since 1.0
          */
         public void addData(String key, long data) throws IllegalArgumentException {
@@ -188,7 +194,7 @@ public class PHToolkit {
          * @param key The key to assign to the data
          * @param data The content of the data
          * @throws IllegalArgumentException If this payload already contains
-         *     a data entry with the given key
+         *     a data entry with the given key, or if the key is {@code null}
          * @since 1.0
          */
         public void addData(String key, float data) throws IllegalArgumentException {
@@ -202,7 +208,7 @@ public class PHToolkit {
          * @param key The key to assign to the data
          * @param data The content of the data
          * @throws IllegalArgumentException If this payload already contains
-         *     a data entry with the given key
+         *     a data entry with the given key, or if the key is {@code null}
          * @since 1.0
          */
         public void addData(String key, double data) throws IllegalArgumentException {
@@ -216,11 +222,16 @@ public class PHToolkit {
          * @param key The key to assign to the data
          * @param data The content of the data
          * @throws IllegalArgumentException If this payload already contains
-         *     a data entry with the given key
+         *     a data entry with the given key, or if the key, data, or any
+         *     element of the data array is {@code null}
          * @since 1.0
          */
         public void addData(String key, String[] data) throws IllegalArgumentException {
-            addData(DataType.ARRAY, key, data);
+            DataEntry[] array = new DataEntry[data.length];
+            for (int i = 0; i < data.length; i++) {
+                array[i] = new DataEntry(DataType.STRING, null, data[i]);
+            }
+            addData(DataType.ARRAY, key, array);
         }
 
         /**
@@ -230,7 +241,8 @@ public class PHToolkit {
          * @param key The key to assign to the data
          * @param data The content of the data
          * @throws IllegalArgumentException If this payload already contains
-         *     a data entry with the given key
+         *     a data entry with the given key, or if the key or data is
+         *     {@code null}
          * @since 1.0
          */
         public void addData(String key, int[] data) throws IllegalArgumentException {
@@ -238,6 +250,13 @@ public class PHToolkit {
         }
 
         private void addData(DataType type, String key, Object data) throws IllegalArgumentException {
+            assert type != null;
+            if (key == null) {
+                throw new IllegalArgumentException("Key must not be null");
+            }
+            if (data == null) {
+                throw new IllegalArgumentException("Content must not be null");
+            }
             if (dataMap.containsKey(key)) {
                 throw new IllegalArgumentException("Cannot redefine key \"" + key + "\" within the payload");
             }
@@ -250,65 +269,70 @@ public class PHToolkit {
             private String key;
             private Object content;
 
-            private DataEntry(DataType type, String key, Object content) {
+            private DataEntry(DataType type, String key, Object content) throws IllegalArgumentException {
                 this.type = type;
                 this.key = key;
                 this.content = content;
             }
 
-            private byte[] serialize() {
-                ByteBuffer buffer = ByteBuffer.allocate(16 + key.length());
+            private byte[] serialize() throws IOException {
+                ByteArrayOutputStream out = new ByteArrayOutputStream();
 
-                buffer.putInt(type.ordinal()); // enter the type of content
+                out.write(type.ordinal()); // enter the type of content
 
-                // enter the key
-                byte[] keyBytes = key.getBytes(StandardCharsets.UTF_8);
-                buffer.putInt(keyBytes.length); // enter key length
-                buffer.put(keyBytes); // enter key content
+                if (key != null) { // only true if this is an element of an array
+                    // enter the key
+                    byte[] keyBytes = key.getBytes(StandardCharsets.UTF_8);
+                    out.write(keyBytes.length); // enter key length
+                    out.write(keyBytes); // enter key content
+                }
 
                 if (type == DataType.ARRAY) { // special handling for arrays
                     DataEntry[] entries = (DataEntry[]) content;
-                    // serialize each entry and put it in the main buffer
+                    // serialize each entry and put it in the main stream
                     for (DataEntry entry : entries) {
                         byte[] bytes = entry.serialize();
-                        buffer.limit(buffer.limit() + bytes.length);
-                        buffer.put(bytes);
+                        out.write(bytes);
                     }
                 } else if (type == DataType.STRING) { // special handling for strings
                     // convert the string to a byte array
                     byte[] strBytes = ((String) content).getBytes(StandardCharsets.UTF_8);
-                    buffer.limit(buffer.limit() + 8 + strBytes.length);
-                    buffer.putInt(strBytes.length); // enter the string length
-                    buffer.put(strBytes); // enter the string data
+                    out.write(strBytes.length); // enter the string length
+                    out.write(strBytes); // enter the string data
                 } else { // default handling
                     assert type.getLength() != -1; // program shouldn't progress to here if content length isn't fixed
-                    buffer.limit(buffer.limit() + type.getLength());
                     // check the type and insert the content
                     switch (type) {
                         case BOOLEAN: {
-                            buffer.put((boolean) content ? (byte) 1 : (byte) 0);
+                            out.write((boolean) content ? (byte) 1 : (byte) 0);
+                            break;
                         }
                         case SHORT: {
-                            buffer.putShort((short) content);
+                            out.write((short) content);
+                            break;
                         }
                         case INT: {
-                            buffer.putInt((int) content);
+                            out.write((int) content);
+                            break;
                         }
                         case LONG: {
-                            buffer.putLong((long) content);
+                            out.write(ByteUtils.toBytes((long) content));
+                            break;
                         }
                         case FLOAT: {
-                            buffer.putFloat((float) content);
+                            out.write(ByteUtils.toBytes((float) content));
+                            break;
                         }
                         case DOUBLE: {
-                            buffer.putDouble((double) content);
+                            out.write(ByteUtils.toBytes((double) content));
+                            break;
                         }
                         default: {
                             throw new AssertionError();
                         }
                     }
                 }
-                return buffer.array();
+                return out.toByteArray();
             }
 
         }
@@ -383,6 +407,27 @@ public class PHToolkit {
             return length;
         }
 
+    }
+
+    private static class ByteUtils {
+
+        private static final ByteBuffer MID_BUFFER = ByteBuffer.allocate(4);
+        private static final ByteBuffer LONG_BUFFER = ByteBuffer.allocate(8);
+
+        public static byte[] toBytes(long x) {
+            LONG_BUFFER.putLong(0, x);
+            return LONG_BUFFER.array();
+        }
+
+        public static byte[] toBytes(float x) {
+            MID_BUFFER.putFloat(0, x);
+            return MID_BUFFER.array();
+        }
+
+        public static byte[] toBytes(double x) {
+            LONG_BUFFER.putDouble(0, x);
+            return LONG_BUFFER.array();
+        }
     }
 
 }
