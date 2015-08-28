@@ -143,29 +143,38 @@ function nextEntry($bytes, $offset, $arrayEntry = false) {
 }
 
 function toShort($bytes) {
-    $sign = ($bytes[0] >> 0x07 === 1 ? 1 : 0);
+    $sign = $bytes[0] >> 0x07;
     return ($bytes[0] << 0x08) + $bytes[1] - ($sign ? pow(2, 16) : 0);
 }
 
 function toInt($bytes) {
-    return ($bytes[0] << 0x18) + ($bytes[1] << 0x10) + ($bytes[2] << 0x08) + $bytes[3];
+    $result = ($bytes[0] << 0x18) + ($bytes[1] << 0x10) + ($bytes[2] << 0x08) + $bytes[3];
+    if (PHP_INT_SIZE === 8) { // we're using 64-bit integers so we can't rely on overflow to sign it for us
+        $sign = $bytes[0] >> 0x07;
+        $result -= $sign ? pow(2, 32) : 0;
+    }
+    return $result;
 }
 
 function toLong($bytes) {
-    //TODO: this is kinda messy. need to decide if the protocol should support longs.
-    $sign = ($bytes[0] >> 0x07 === 1 ? 1 : 0);
-    $result = lsh($bytes[0], 0x38);
-    $result = bcadd($result, lsh($bytes[1], 0x30));
-    $result = bcadd($result, lsh($bytes[2], 0x28));
-    $result = bcadd($result, lsh($bytes[3], 0x20));
-    $result = bcadd($result, lsh($bytes[4], 0x18));
-    $result = bcadd($result, lsh($bytes[5], 0x10));
-    $result = bcadd($result, lsh($bytes[6], 0x08));
-    $result = bcadd($result, $bytes[7]);
-    if ($sign) {
-        $result = bcsub($result, bcpow(2, 64));
+    if (PHP_INT_SIZE === 8) { // we can use 64-bit arithmetic, yay
+        return ($bytes[0] << 0x38) + ($bytes[1] << 0x30) + ($bytes[2] << 0x28) + ($bytes[3] << 0x20)
+             + ($bytes[4] << 0x18) + ($bytes[5] << 0x10) + ($bytes[6] << 0x08) + $bytes[7];
+    } else { // we can't use 64-bit arithmetic
+        $sign = $bytes[0] >> 0x07;
+        $result = lsh($bytes[0], 0x38);
+        $result = bcadd($result, lsh($bytes[1], 0x30));
+        $result = bcadd($result, lsh($bytes[2], 0x28));
+        $result = bcadd($result, lsh($bytes[3], 0x20));
+        $result = bcadd($result, lsh($bytes[4], 0x18));
+        $result = bcadd($result, lsh($bytes[5], 0x10));
+        $result = bcadd($result, lsh($bytes[6], 0x08));
+        $result = bcadd($result, $bytes[7]);
+        if ($sign) {
+            $result = bcsub($result, bcpow(2, 64));
+        }
+        return $result;
     }
-    return $result;
 }
 
 function toFloat($bytes) {
@@ -173,15 +182,26 @@ function toFloat($bytes) {
 }
 
 function toDouble($bytes) {
-    //TODO: this is broken because PHP
-    return unpack('d', pack('l', toLong($bytes)));
+    if (PHP_INT_SIZE === 8) { // we can use 64-bit arithmetic
+        return unpack('d', pack('l', toLong($bytes)));
+    } else { // otherwise, we're kinda stuck and have to stomach the precision loss
+        $sign = $bytes[0] >> 0x07;
+        $exp = ((($bytes[0] & 0x7F) << 0x04) + ($bytes[1] >> 0x04)) - 1023;
+        $exp = ($exp < 0 ? -1 : 1) * (abs($exp) & 0xFF) + 127;
+        $newBytes = array();
+        $newBytes[0] = ($sign << 0x07) + ($exp >> 0x01);
+        $newBytes[1] = (($exp & 0x01) << 0x07) + ($bytes[2] >> 0x01);
+        $newBytes[2] = (($bytes[2] & 0x01) << 0x07) + ($bytes[3] >> 0x01);
+        $newBytes[3] = (($bytes[3] & 0x01) << 0x07) + ($bytes[4] >> 0x01);
+        return toFloat($newBytes);
+    }
 }
 
 function array_pack($arr) {
     return call_user_func_array("pack", array_merge(array("c*"), $arr));
 }
 
-// because PHP doesn't have native long support, nor does it have ANY support for long int bitwise operations
+// because PHP doesn't have always native long support, nor does it have ANY support for long int bitwise operations
 function lsh($num, $bits) {
     return bcmul($num, bcpow('2', $bits));
 }
