@@ -205,12 +205,12 @@ function toLong($bytes) {
 }
 
 function toFloat($bytes) {
-    return unpack('f', pack('i', toInt($bytes)));
+    return unpack('f', pack('i', toInt($bytes)))[1];
 }
 
 function toDouble($bytes) {
     if (PHP_INT_SIZE === 8) { // we can use 64-bit arithmetic
-        return unpack('d', pack('l', toLong($bytes)));
+        return unpack('d', pack('l', toLong($bytes)))[1];
     } else { // otherwise, we're kinda stuck and have to stomach the precision loss
         $sign = $bytes[0] >> 0x07;
         $exp = ((($bytes[0] & 0x7F) << 0x04) + ($bytes[1] >> 0x04)) - 1023;
