@@ -1,7 +1,7 @@
-PH Toolkit [![Build Status](http://ci.caseif.net/job/jTelemetry/badge/icon)](http://ci.caseif.net/job/jTelemetry/)
+jTelemetry [![Build Status](http://ci.caseif.net/job/jTelemetry/badge/icon)](http://ci.caseif.net/job/jTelemetry/)
 ========
 
-PH Toolkit is a lightweight Java toolkit for submitting arbitrary information to a web server.
+jTelemetry is a lightweight Java toolkit for submitting arbitrary information to a web server.
 
 Usage
 -----
