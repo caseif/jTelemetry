@@ -67,7 +67,6 @@ processResources {
 }
 
 jar {
-    classifier = 'base'
 }
 
 task sourceJar(type: Jar) {
