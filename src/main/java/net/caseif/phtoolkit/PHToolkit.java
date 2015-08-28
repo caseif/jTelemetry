@@ -171,7 +171,7 @@ public class PHToolkit {
          * @since 1.0
          */
         public void addData(String key, byte data) throws IllegalArgumentException {
-            addData(DataType.BOOLEAN, key, data);
+            addData(DataType.BYTE, key, data);
         }
 
         /**
@@ -269,7 +269,11 @@ public class PHToolkit {
          * @since 1.0
          */
         public void addData(String key, int[] data) throws IllegalArgumentException {
-            addData(DataType.ARRAY, key, data);
+            DataEntry[] array = new DataEntry[data.length];
+            for (int i = 0; i < data.length; i++) {
+                array[i] = new DataEntry(DataType.INT, null, data[i]);
+            }
+            addData(DataType.ARRAY, key, array);
         }
 
         /**
@@ -472,7 +476,7 @@ public class PHToolkit {
         private static final ByteBuffer LONG_BUFFER = ByteBuffer.allocate(8);
 
         public static byte[] toBytes(short x) {
-            SHORT_BUFFER.putInt(0, x);
+            SHORT_BUFFER.putShort(0, x);
             return SHORT_BUFFER.array();
         }
 
