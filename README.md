@@ -1,7 +1,7 @@
 PH Toolkit [![Build Status](http://ci.caseif.net/job/jTelemetry/badge/icon)](http://ci.caseif.net/job/jTelemetry/)
 ========
 
-PH Toolkit is a lightweight Java toolkit for submitting arbitrary information to a web server (i.e. "phoning home").
+PH Toolkit is a lightweight Java toolkit for submitting arbitrary information to a web server.
 
 Usage
 -----
@@ -24,8 +24,18 @@ payload.addData("someStringArray", new String[]{"something, something else"});
 Finally, submit the data to the server:
 
 ```
-payload.submit();
+HttpResponse response = payload.submit();
 ```
+
+You can then analyze the response:
+
+```
+int statusCode = response.getStatusCode();
+String responseMessage = response.getMessage();
+```
+
+The server implementation may provide more information for non-success responses in the message depending on the status
+code.
 
 Contributing
 ------------
