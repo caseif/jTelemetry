@@ -37,6 +37,9 @@ String responseMessage = response.getMessage();
 The server implementation may provide more information for non-success responses in the message depending on the status
 code.
 
+jTelemetry can be shaded as a Maven dependency. Add `http://repo.caseif.net/content/groups/public/` as a repository, and
+`net.caseif.jtelemetry:jtelemetry:1.0.0` as a dependency.
+
 Contributing
 ------------
 
