@@ -47,6 +47,8 @@ import java.util.Map;
  */
 public class JTelemetry {
 
+    private static final int PROTOCOL_REVISION = 1;
+
     private final String recipient;
 
     /**
@@ -111,12 +113,25 @@ public class JTelemetry {
          * Attempts to submit this payload to the address defined by the parent
          * {@link JTelemetry}.
          *
-         * @return The HTTP response code returned by the server
+         * <p>The server will respond with a {@code 2xx} response code upon the
+         * request being accepted. Additionally, it may return a non-success
+         * response code:</p>
+         * <ul>
+         *     <li>{@code 413} - If the payload exceeds the size limit defined
+         *     by the server (usually 32 KB)</li>
+         *     <li>{@code 501} - If the server does not support the protocol
+         *     version specified by the client (this usually denotes an outdated
+         *     server)</li>
+         * </ul>
+         *
+         * @return The {@link JTelemetry.HttpResponse HTTP response} returned by
+         *     the server
          * @throws IOException If an exception occurs while sending a request to
          *     the remote server
          * @since 1.0
          */
-        public int submit() throws IOException {
+        @SuppressWarnings("unused")
+        public HttpResponse submit() throws IOException {
             URL url = new URL(getParent().getRecipient());
             HttpURLConnection conn = (HttpURLConnection) url.openConnection();
             conn.setRequestMethod("POST");
@@ -127,7 +142,7 @@ public class JTelemetry {
             try (DataOutputStream wr = new DataOutputStream(conn.getOutputStream())) {
                 wr.write(serial);
             }
-            return conn.getResponseCode();
+            return new HttpResponse(conn.getResponseCode(), conn.getResponseMessage());
         }
 
         private byte[] serializeData() {
@@ -136,6 +151,7 @@ public class JTelemetry {
                 // magic number for verification purposes
                 byte[] magic = new byte[]{(byte) 0xB0, (byte) 0x00, (byte) 0xB1, (byte) 0xE5};
                 out.write(magic);
+                out.write(ByteUtils.toBytes(PROTOCOL_REVISION)); // protocol revision
                 for (DataEntry entry : dataMap.values()) {
                     byte[] serial = entry.serialize();
                     out.write(serial);
@@ -499,6 +515,43 @@ public class JTelemetry {
             LONG_BUFFER.putDouble(0, x);
             return LONG_BUFFER.array();
         }
+    }
+
+    /**
+     * Represents an HTTP response returned by a server.
+     *
+     * @since 1.0
+     */
+    public class HttpResponse {
+
+        private final int code;
+        private final String message;
+
+        private HttpResponse(int code, String message) {
+            this.code = code;
+            this.message = message;
+        }
+
+        /**
+         * Returns the status code of this {@link HttpResponse}.
+         *
+         * @return The status code of this {@link HttpResponse}
+         * @since 1.0
+         */
+        public int getStatusCode() {
+            return code;
+        }
+
+        /**
+         * Returns the message of this {@link HttpResponse}.
+         *
+         * @return The message of this {@link HttpResponse}
+         * @since 1.0
+         */
+        public String getMessage() {
+            return message;
+        }
+
     }
 
 }

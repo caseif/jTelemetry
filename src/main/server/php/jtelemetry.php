@@ -4,6 +4,11 @@
 //
 // Usage: include jtelemetry.php from the page the payload is sent to and call parsePostBody().
 // This method will return a map of all key-value pairs contained by the payload.
+//
+// NOTE: This file requires PHP 5.4 or greater
+
+$SUPPORTED_PROTOCOL_REVISION = 1;
+$MAX_PAYLOAD_SIZE = 32 * 1024; // 32 KB
 
 $TYPE_BOOLEAN = 0;
 $TYPE_BYTE    = 1;
@@ -18,6 +23,22 @@ $TYPE_ARRAY   = 8;
 parsePostBody();
 
 function parsePostBody() {
+    global $SUPPORTED_PROTOCOL_REVISION, $MAX_PAYLOAD_SIZE;
+    
+    if ($_SERVER["REQUEST_METHOD"] !== "POST") {
+        http_response_code(405);
+        exit();
+    }
+    
+    if (!isset($_SERVER["CONTENT_LENGTH"])) {
+        http_response_code(411);
+        exit();
+    }
+    if ($_SERVER["CONTENT_LENGTH"] > $MAX_PAYLOAD_SIZE) {
+        header("HTTP/1.1 413 Payload Too Large (content exceeds ".$MAX_PAYLOAD_SIZE." bytes)");
+        exit();
+    }
+    
     $input = file_get_contents("php://input");
     $bytes = str_split($input);
     foreach ($bytes as $key=>$val) {
@@ -26,13 +47,19 @@ function parsePostBody() {
 
     $magic = [0xB0, 0x00, 0xB1, 0xE5];
     if (array_slice($bytes, 0, 4) !== $magic) {
-        http_response_code(400);
+        header("HTTP/1.1 400 Bad Request (bad magic number)");
+        exit();
+    }
+    
+    $protocolRevision = toInt(array_slice($bytes, 4, 4));
+    if ($protocolRevision > $SUPPORTED_PROTOCOL_REVISION) {
+        header("HTTP/1.1 501 Not Implemented (unsupported protocol revision: ".$protocolRevision.")");
         exit();
     }
 
     $data = array();
 
-    for ($i = 4; $i < sizeof($bytes);) {
+    for ($i = 8; $i < sizeof($bytes);) {
         $entryProperties = nextEntry($bytes, $i);
         $key = $entryProperties["key"];
         $value = $entryProperties["value"];
@@ -131,7 +158,7 @@ function nextEntry($bytes, $offset, $arrayEntry = false) {
             break;
         }
         default: {
-            http_response_code(501);
+            header("HTTP/1.1 400 Bad Request (bad payload element at byte offset ".$i.")");
             exit();
         }
     }
