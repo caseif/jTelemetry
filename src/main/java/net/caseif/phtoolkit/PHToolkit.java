@@ -119,7 +119,8 @@ public class PHToolkit {
         }
 
         /**
-         * Adds a piece of data to this {@link Payload} in the form of a string.
+         * Adds a piece of data to this {@link Payload} in the form of a boolean
+         * (1-bit integer).
          *
          * @param key The key to assign to the data
          * @param data The content of the data
@@ -127,8 +128,8 @@ public class PHToolkit {
          *     a data entry with the given key, or if the key is {@code null}
          * @since 1.0
          */
-        public void addData(String key, String data) throws IllegalArgumentException {
-            addData(DataType.STRING, key, data);
+        public void addData(String key, boolean data) throws IllegalArgumentException {
+            addData(DataType.BOOLEAN, key, data);
         }
 
         /**
@@ -141,7 +142,7 @@ public class PHToolkit {
          *     a data entry with the given key, or if the key is {@code null}
          * @since 1.0
          */
-        public void addData(String key, boolean data) throws IllegalArgumentException {
+        public void addData(String key, byte data) throws IllegalArgumentException {
             addData(DataType.BOOLEAN, key, data);
         }
 
@@ -216,6 +217,34 @@ public class PHToolkit {
         }
 
         /**
+         * Adds a piece of data to this {@link Payload} in the form of a string.
+         *
+         * @param key The key to assign to the data
+         * @param data The content of the data
+         * @throws IllegalArgumentException If this payload already contains
+         *     a data entry with the given key, or if the key is {@code null}
+         * @since 1.0
+         */
+        public void addData(String key, String data) throws IllegalArgumentException {
+            addData(DataType.STRING, key, data);
+        }
+
+        /**
+         * Adds a piece of data to this {@link Payload} in the form of a 32-bit
+         * integer array.
+         *
+         * @param key The key to assign to the data
+         * @param data The content of the data
+         * @throws IllegalArgumentException If this payload already contains
+         *     a data entry with the given key, or if the key or data is
+         *     {@code null}
+         * @since 1.0
+         */
+        public void addData(String key, int[] data) throws IllegalArgumentException {
+            addData(DataType.ARRAY, key, data);
+        }
+
+        /**
          * Adds a piece of data to this {@link Payload} in the form of a string
          * array.
          *
@@ -232,21 +261,6 @@ public class PHToolkit {
                 array[i] = new DataEntry(DataType.STRING, null, data[i]);
             }
             addData(DataType.ARRAY, key, array);
-        }
-
-        /**
-         * Adds a piece of data to this {@link Payload} in the form of a 32-bit
-         * integer array.
-         *
-         * @param key The key to assign to the data
-         * @param data The content of the data
-         * @throws IllegalArgumentException If this payload already contains
-         *     a data entry with the given key, or if the key or data is
-         *     {@code null}
-         * @since 1.0
-         */
-        public void addData(String key, int[] data) throws IllegalArgumentException {
-            addData(DataType.ARRAY, key, data);
         }
 
         private void addData(DataType type, String key, Object data) throws IllegalArgumentException {
@@ -278,41 +292,50 @@ public class PHToolkit {
             private byte[] serialize() throws IOException {
                 ByteArrayOutputStream out = new ByteArrayOutputStream();
 
-                out.write(type.ordinal()); // enter the type of content
+                out.write((byte) type.ordinal()); // enter the type of content
 
                 if (key != null) { // only true if this is an element of an array
                     // enter the key
                     byte[] keyBytes = key.getBytes(StandardCharsets.UTF_8);
-                    out.write(keyBytes.length); // enter key length
+                    out.write(ByteUtils.toBytes(keyBytes.length)); // enter key length
                     out.write(keyBytes); // enter key content
                 }
 
                 if (type == DataType.ARRAY) { // special handling for arrays
                     DataEntry[] entries = (DataEntry[]) content;
-                    // serialize each entry and put it in the main stream
+                    // serialize each entry and put it in a temp stream
+                    ByteArrayOutputStream temp = new ByteArrayOutputStream();
                     for (DataEntry entry : entries) {
                         byte[] bytes = entry.serialize();
-                        out.write(bytes);
+                        temp.write(bytes);
                     }
+                    byte[] bytes = temp.toByteArray();
+                    out.write(ByteUtils.toBytes(bytes.length)); // write the length of the entire array
+                    out.write(ByteUtils.toBytes(entries.length)); // write the number of entries
+                    out.write(bytes); // write the entries themselves
                 } else if (type == DataType.STRING) { // special handling for strings
                     // convert the string to a byte array
                     byte[] strBytes = ((String) content).getBytes(StandardCharsets.UTF_8);
-                    out.write(strBytes.length); // enter the string length
+                    out.write(ByteUtils.toBytes(strBytes.length)); // enter the string length
                     out.write(strBytes); // enter the string data
                 } else { // default handling
                     assert type.getLength() != -1; // program shouldn't progress to here if content length isn't fixed
                     // check the type and insert the content
                     switch (type) {
                         case BOOLEAN: {
-                            out.write((boolean) content ? (byte) 1 : (byte) 0);
+                            out.write((boolean) content ? 1 : 0);
+                            break;
+                        }
+                        case BYTE: {
+                            out.write((byte) content);
                             break;
                         }
                         case SHORT: {
-                            out.write((short) content);
+                            out.write(ByteUtils.toBytes((short) content));
                             break;
                         }
                         case INT: {
-                            out.write((int) content);
+                            out.write(ByteUtils.toBytes((int) content));
                             break;
                         }
                         case LONG: {
@@ -346,18 +369,17 @@ public class PHToolkit {
      */
     private enum DataType {
         /**
-         * A UTF-8 string. String data entries are to be prefixed with a 32-bit integer representing their respective
-         * length.
-         *
-         * @since 1.0
-         */
-        STRING(-1),
-        /**
-         * A boolean value (1-bit integer).
+         * A boolean (1-bit integer) value.
          *
          * @since 1.0
          */
         BOOLEAN(1),
+        /**
+         * An 8-bit byte value
+         *
+         * @since 1.0
+         */
+        BYTE(1),
         /**
          * A short (16-bit) integer value.
          *
@@ -388,7 +410,13 @@ public class PHToolkit {
          * @since 1.0
          */
         DOUBLE(8),
-
+        /**
+         * A UTF-8 string. String data entries are to be prefixed with a 32-bit integer representing their respective
+         * length.
+         *
+         * @since 1.0
+         */
+        STRING(-1),
         /**
          * An array of objects. Array-type data entries are to be prefixed with a 32-bit signed integer representing
          * their respective length (i.e. the number of entries contained).
@@ -411,8 +439,19 @@ public class PHToolkit {
 
     private static class ByteUtils {
 
+        private static final ByteBuffer SHORT_BUFFER = ByteBuffer.allocate(2);
         private static final ByteBuffer MID_BUFFER = ByteBuffer.allocate(4);
         private static final ByteBuffer LONG_BUFFER = ByteBuffer.allocate(8);
+
+        public static byte[] toBytes(short x) {
+            SHORT_BUFFER.putInt(0, x);
+            return SHORT_BUFFER.array();
+        }
+
+        public static byte[] toBytes(int x) {
+            MID_BUFFER.putInt(0, x);
+            return MID_BUFFER.array();
+        }
 
         public static byte[] toBytes(long x) {
             LONG_BUFFER.putLong(0, x);
