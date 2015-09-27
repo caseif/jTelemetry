@@ -8,13 +8,13 @@ Usage
 
 To use jTelemetry, first create an instance of the main class:
 
-```
+```java
 JTelemetry jt = new JTelemetry("http://example.com/post_page.php");
 ```
 
 Then, create a `Payload` object and add data to it:
 
-```
+```java
 JTelemetry.Payload payload = jt.createPayload();
 payload.addData("someString", "example");
 payload.addData("someInt", 5);
@@ -23,13 +23,13 @@ payload.addData("someStringArray", new String[]{"something, something else"});
 
 Finally, submit the data to the server:
 
-```
+```java
 HttpResponse response = payload.submit();
 ```
 
 You can then analyze the response:
 
-```
+```java
 int statusCode = response.getStatusCode();
 String responseMessage = response.getMessage();
 ```
