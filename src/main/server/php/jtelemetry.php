@@ -8,7 +8,7 @@
 // NOTE: This file requires PHP 5.4 or greater
 
 $SUPPORTED_PROTOCOL_REVISION = 1;
-$MAX_PAYLOAD_SIZE = 32 * 1024; // 32 KB
+$MAX_PAYLOAD_SIZE = 4 * 1024; // 4 KB
 
 $TYPE_BOOLEAN = 0;
 $TYPE_BYTE    = 1;

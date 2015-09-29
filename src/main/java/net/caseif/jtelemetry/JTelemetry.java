@@ -274,6 +274,24 @@ public class JTelemetry {
         }
 
         /**
+         * Adds raw data to this {@link Payload} in the form of a byte array.
+         *
+         * @param key The key to assign to the data
+         * @param data The content of the data
+         * @throws IllegalArgumentException If this payload already contains
+         *     a data entry with the given key, or if the key or data is
+         *     {@code null}
+         * @since 1.0
+         */
+        public void addData(String key, byte... data) throws IllegalArgumentException {
+            DataEntry[] array = new DataEntry[data.length];
+            for (int i = 0; i < data.length; i++) {
+                array[i] = new DataEntry(DataType.BYTE, null, data[i]);
+            }
+            addData(DataType.ARRAY, key, array);
+        }
+
+        /**
          * Adds a piece of data to this {@link Payload} in the form of a 32-bit
          * integer array.
          *
