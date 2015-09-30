@@ -8,7 +8,7 @@
 // NOTE: This file requires PHP 5.4 or greater
 
 $SUPPORTED_PROTOCOL_REVISION = 1;
-$MAX_PAYLOAD_SIZE = 4 * 1024; // 4 KB
+$MAX_PAYLOAD_SIZE = 4 * 1024; // 32 KB
 
 $TYPE_BOOLEAN = 0;
 $TYPE_BYTE    = 1;
@@ -208,18 +208,39 @@ function toFloat($bytes) {
     return unpack('f', pack('i', toInt($bytes)))[1];
 }
 
+//TODO: this function doesn't support subnormal numbers and also does strange things to very large/small exponents
+// thought: it may make more sense to convert it to decimal, THEN to a single-precision float to avoid rounding errors
 function toDouble($bytes) {
     if (PHP_INT_SIZE === 8) { // we can use 64-bit arithmetic
         return unpack('d', pack('l', toLong($bytes)))[1];
     } else { // otherwise, we're kinda stuck and have to stomach the precision loss
+        // extract the sign (the first bit of the double-precision bytes)
         $sign = $bytes[0] >> 0x07;
-        $exp = ((($bytes[0] & 0x7F) << 0x04) + ($bytes[1] >> 0x04)) - 1023;
-        $exp = ($exp < 0 ? -1 : 1) * (abs($exp) & 0xFF) + 127;
+
+        // special cases
+        if ($bytes[0] & 0x7F == 0x7F && $bytes[1] >> 4 == 0xF) { // + or - infinity, or NaN
+            // special exponent
+            $exp = 0xFF;
+        } else {
+            // exponent is the last 7 bits of the first byte and the first 4 bits of the second byte
+            $exp = ((($bytes[0] & 0x7F) << 0x04) + ($bytes[1] >> 0x04));
+            // subtract the zero-offset for double-precision exponents
+            $exp -= 1023;
+            // mask the absolute value so it fits in 1 byte, add the single-precision zero-offset, and reapply the sign
+            $exp = ($exp < 0 ? -1 : 1) * (abs($exp) & 0xFF) + 127;
+        }
+
+        // instantiate the array which stores the single-precision bytes
         $newBytes = array();
+        // first byte is the sign (1 bit) and the first 7 bits of the exponent
         $newBytes[0] = ($sign << 0x07) + ($exp >> 0x01);
-        $newBytes[1] = (($exp & 0x01) << 0x07) + ($bytes[2] >> 0x01);
-        $newBytes[2] = (($bytes[2] & 0x01) << 0x07) + ($bytes[3] >> 0x01);
-        $newBytes[3] = (($bytes[3] & 0x01) << 0x07) + ($bytes[4] >> 0x01);
+        // second byte is the first bit of the exponent and the first 7 bits of the significand
+        $newBytes[1] = (($exp & 0x01) << 0x07) + (($bytes[1] << 0x03) & 0x7F) + ($bytes[2] >> 0x05);
+        // third byte is the next 8 bits of the significand
+        $newBytes[2] = (($bytes[2] << 0x03) & 0xFF) + ($bytes[3] >> 0x05);
+        // fourth byte is the final (significant) 8 bits of the significand
+        $newBytes[3] = (($bytes[3] << 0x03) & 0xFF) + ($bytes[4] >> 0x05);
+        // convert the single-precision bytes to a PHP float
         return toFloat($newBytes);
     }
 }
