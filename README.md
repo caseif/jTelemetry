@@ -24,7 +24,7 @@ payload.addData("someStringArray", new String[]{"something, something else"});
 Finally, submit the data to the server:
 
 ```java
-HttpResponse response = payload.submit();
+JTelemetry.Payload.HttpResponse response = payload.submit();
 ```
 
 You can then analyze the response:
@@ -38,7 +38,7 @@ The server implementation may provide more information for non-success responses
 code.
 
 jTelemetry can be shaded as a Maven dependency. Add `http://repo.caseif.net/content/groups/public/` as a repository, and
-`net.caseif.jtelemetry:jtelemetry:1.0.0` as a dependency.
+`net.caseif.jtelemetry:jtelemetry:1.1.0` as a dependency.
 
 Contributing
 ------------
